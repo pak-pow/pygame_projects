@@ -1,4 +1,4 @@
-Tags: [[PyGame]], [[Game]], [[Python]], [[Programming]]
+Tags: [[PyGame]], [[Game]], [[Python]], [[Programming]], [[Obsidian]]
 
 ---
 ## 🧠 CONCEPT SUMMARY
