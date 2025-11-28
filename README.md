@@ -10,6 +10,7 @@ This roadmap is structured to introduce one major mechanic at a time. It starts 
 
 | # | Game Project | Status | Key Concepts & Goals |
 |:-:| :--- | :--- | :--- |
+| 0 | [**Calculator**](./calculator) | ✅ Done | **GUI Fundamentals**: Creating buttons, handling Mouse Input, and logic state management. |
 | 1 | [**Pong**](./01_pong) | 🔴 Todo | Basic collision detection, understanding the Game Loop, and drawing `Rect` objects. |
 | 2 | [**Snake**](./02_snake) | 🔴 Todo | Manipulating `Lists`, handling Grid movement, and random item generation. |
 | 3 | [**Breakout**](./03_breakout) | 🔴 Todo | Advanced physics reflection, managing object state, and score tracking. |
