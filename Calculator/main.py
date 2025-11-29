@@ -1,21 +1,15 @@
+# importing important modules
+# Such as the Game Module [Pygame] and SYS
 import pygame, sys
 import pygame.font
 from pygame.locals import *
 
-def add_function(x,y):
-    return x + y
-
-def minus_function(x,y):
-    return x - y
-
-def times_function(x,y):
-    return x * y
-
-def divide_function(x,y):
-    return x / y
-
+# Defining the main function
+# To fully re-learn the classes in python
 def main():
 
+    # initializing all imported pygame modules
+    # (Essential starting steps for any pygame projects)
     pygame.init()
     font = pygame.font.SysFont(None, 40)
     display = pygame.display.set_mode((500,700))
@@ -54,7 +48,7 @@ def main():
     button_equals = pygame.Rect(325,580,135,60)
 
     # button clear
-    button_clear = pygame.Rect(25, 135, 80, 40)
+    button_clear = pygame.Rect(25, 133, 80, 40)
 
     # rendering the text
     text_surface1 = font.render("1", True, (0,0,0))
@@ -175,7 +169,8 @@ def main():
 
                 try:
                     current_input = str(eval(current_input))
-                except:
+
+                except :
                     current_input = "ERROR"
 
         display.fill((255, 255, 255))
