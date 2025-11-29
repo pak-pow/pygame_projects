@@ -129,18 +129,29 @@ def main():
     text_rect_clear = text_surface_clear.get_rect(center=button_clear.center)
 
     """ GAME LOOP """
+    # This while loop runs continuously until the user closes the window.
     while True:
 
+        # Check every event (mouse clicks, key presses) that happened since last frame
         for event in pygame.event.get():
 
+            # If the user clicked the 'X' button on the window
             if event.type == QUIT:
+
+                # Shut down pygame
                 pygame.quit()
+
+                # Shut down the python script
                 sys.exit()
 
+            """ INPUT HANDLING """
+            # 'collidepoint(event.pos)' checks if the mouse click happened inside the button
             if event.type == MOUSEBUTTONDOWN and button_clear.collidepoint(event.pos):
-                current_input = ""
-                print("CLEAR")
 
+                # Reset string to empty
+                current_input = ""
+
+            # If button 1 is clicked, add "1" to the current equation string
             if event.type == MOUSEBUTTONDOWN and button1.collidepoint(event.pos):
                 current_input += "1"
 
@@ -177,6 +188,7 @@ def main():
             if event.type == MOUSEBUTTONDOWN and button000.collidepoint(event.pos):
                 current_input += "000"
 
+            # Adding symbols to the equation string
             if event.type == MOUSEBUTTONDOWN and button_plus.collidepoint(event.pos):
                 current_input += "+"
 
@@ -189,23 +201,36 @@ def main():
             if event.type == MOUSEBUTTONDOWN and button_divide.collidepoint(event.pos):
                 current_input += "/"
 
+            # --- CALCULATION LOGIC ---
             if event.type == MOUSEBUTTONDOWN and button_equals.collidepoint(event.pos):
 
-                try:
-                    current_input = str(eval(current_input))
+                # added a small easter egg hehe
+                if current_input == "5+5":
+                    current_input = "Hello world"
 
-                except :
-                    current_input = "ERROR"
+                else:
+                    try:
+                        # eval() takes a string like "5+5" and does the math (returns 10)
+                        # We wrap it in str() to turn the number 10 back into text "10"
+                        current_input = str(eval(current_input))
 
+                    except:
+
+                        # If the math is impossible (like dividing by zero), show ERROR
+                        current_input = "ERROR"
+
+
+        """ DRAWING SECTION """
+        # 1. Fill the background white so we have a clean slate every frame
         display.fill((255, 255, 255))
 
-        # now drawing the display screen
+        # 2. Draw the grey rectangle where the numbers appear
         pygame.draw.rect(display,display_result_color,display_result)
 
-        # drawing the line that separates the screen and the buttons
+        # 3. Draw a decorative line separating screen and buttons
         pygame.draw.line(display,display_result_color,(0,150), (500,150))
 
-        # drawing the buttons from 1-9
+        ## 4. Draw all the button rectangles (The Grey Boxes)
         pygame.draw.rect(display,display_result_color,button1)
         pygame.draw.rect(display,display_result_color,button2)
         pygame.draw.rect(display,display_result_color,button3)
@@ -230,7 +255,7 @@ def main():
         pygame.draw.rect(display,display_result_color,button_divide)
         pygame.draw.rect(display,display_result_color,button_equals)
 
-        # displaying the texts
+        # 5. Draw the text on top of the buttons ('blit' means copy pixels to screen)
         display.blit(text_surface1,text_rect1)
         display.blit(text_surface2,text_rect2)
         display.blit(text_surface3,text_rect3)
@@ -253,15 +278,23 @@ def main():
         display.blit(text_surface_divide,text_rect_divide)
         display.blit(text_surface_equals,text_rect_equals)
 
-        # Displaying the numbers in the display result
+        # 6. Render the CURRENT INPUT (the numbers you typed)
+        # We render it fresh every frame because the numbers change
         display_text = font.render(current_input, True, (0, 0, 0))
+
+        # We place it slightly offset inside the result box
         display.blit(display_text, (display_result.x + 20, display_result.y + 30))
 
+        # Draw Clear button and its text
         pygame.draw.rect(display, display_result_color, button_clear)
         display.blit(text_surface_clear, text_rect_clear)
 
+        # Update the window title
         pygame.display.set_caption("CALCULATOR  ")
+
+        # 7. Update the full display Surface to the screen
         pygame.display.update()
 
+# Standard Python check to run main() only if this file is run directly
 if __name__ == "__main__":
     main()
