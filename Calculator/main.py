@@ -11,49 +11,70 @@ def main():
     # initializing all imported pygame modules
     # (Essential starting steps for any pygame projects)
     pygame.init()
+
+    # Creating a font object
+    # None uses the default system
+    # Size being 40
     font = pygame.font.SysFont(None, 40)
+
+    # Creating a window or a display to put all the things we need to do
+    # width 500 and height 700 (x, y)
     display = pygame.display.set_mode((500,700))
 
     # Adding a variable called current input
+    # Example "5+5"
     current_input = ""
 
-    # making the display result screen and more or
-    # less like the seeing the number
+    # making the display result screen and more or less like the seeing the number
+    # Create a rectangle area for the display screen at (x=25, y=25)
     display_result = pygame.Rect(25,25,450,100)
+
+    # Define a color variable (Grey) using RGB values
     display_result_color = (217, 217, 217)
 
-    # buttons for the 1-9
+    """ BUTTON DEFINITIONS """
+    # pygame.Rect arguments are (x_position, y_position, width, height)
+
+    # Row 1: 1, 2, 3
     button1 = pygame.Rect(25,180,80,100)
     button2 = pygame.Rect(125,180,80,100)
     button3 = pygame.Rect(225,180,80,100)
 
+    # Row 2: 4, 5, 6
     button4 = pygame.Rect(25,300,80,100)
     button5 = pygame.Rect(125,300,80,100)
     button6 = pygame.Rect(225,300,80,100)
 
+    # Row 3: 7, 8, 9
     button7 = pygame.Rect(25,420,80,100)
     button8 = pygame.Rect(125,420,80,100)
     button9 = pygame.Rect(225,420,80,100)
 
-    # buttons for 0s
+    # Row 4: 0, 00, 000
     button0 = pygame.Rect(25,540,80,100)
     button00 = pygame.Rect(125,540,80,100)
     button000 = pygame.Rect(225,540,80,100)
 
-    # buttons for operations
+    # Operations Column (+, -, *, /)
     button_plus = pygame.Rect(325,180,60,180)
     button_minus = pygame.Rect(400,180,60,180)
     button_times = pygame.Rect(325,380,60,180)
     button_divide = pygame.Rect(400,380,60,180)
     button_equals = pygame.Rect(325,580,135,60)
 
-    # button clear
+    # Clear button (top left small button)
     button_clear = pygame.Rect(25, 133, 80, 40)
 
-    # rendering the text
+    """ TEXT RENDERING SETUP """
+    # We have to "draw" the text into an image (Surface) before we can show it.
+
+    # Step 1: Render the text "1" in black (0,0,0).
     text_surface1 = font.render("1", True, (0,0,0))
+
+    # Step 2: Get the rectangle of that text and center it inside button1.
     text_rect1 = text_surface1.get_rect(center = button1.center)
 
+    # (Repeating this process for all numbers 2-9...)
     text_surface2 = font.render("2", True, (0,0,0))
     text_rect2 = text_surface2.get_rect(center = button2.center)
 
@@ -78,6 +99,7 @@ def main():
     text_surface9 = font.render("9", True, (0, 0, 0))
     text_rect9 = text_surface9.get_rect(center=button9.center)
 
+    # (Repeating process for Zeros...)
     text_surface0 = font.render("0", True, (0, 0, 0))
     text_rect0 = text_surface0.get_rect(center=button0.center)
 
@@ -87,6 +109,7 @@ def main():
     text_surface000 = font.render("000", True, (0, 0, 0))
     text_rect000 = text_surface000.get_rect(center=button000.center)
 
+    # (Repeating process for Symbols...)
     text_surface_plus = font.render("+", True, (0, 0, 0))
     text_rect_plus = text_surface_plus.get_rect(center=button_plus.center)
 
@@ -105,6 +128,7 @@ def main():
     text_surface_clear = font.render("C", True, (0, 0, 0))
     text_rect_clear = text_surface_clear.get_rect(center=button_clear.center)
 
+    """ GAME LOOP """
     while True:
 
         for event in pygame.event.get():
