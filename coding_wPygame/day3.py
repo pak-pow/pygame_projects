@@ -46,30 +46,32 @@ def main():
 
             if event.type == KEYDOWN:
 
-                if event.key == K_LEFT:
+                # updated the new logic so that if the user preses either arrow keys or
+                # WASD it will move
+                if event.key == K_LEFT or event.key == K_a:
                     M_left = True
 
-                if event.key == K_RIGHT:
+                if event.key == K_RIGHT or event.key == K_d:
                     M_right = True
 
-                if event.key == K_UP:
+                if event.key == K_UP or event.key == K_w:
                     M_up = True
 
-                if event.key == K_DOWN:
+                if event.key == K_DOWN or event.key == K_s:
                     M_down = True
 
             if event.type == KEYUP:
 
-                if event.key == K_LEFT:
+                if event.key == K_LEFT or event.key == K_a:
                     M_left = False
 
-                if event.key == K_RIGHT:
+                if event.key == K_RIGHT or event.key == K_d:
                     M_right = False
 
-                if event.key == K_UP:
+                if event.key == K_UP or event.key == K_w:
                     M_up = False
 
-                if event.key == K_DOWN:
+                if event.key == K_DOWN or event.key == K_s:
                     M_down = False
 
             if event.type == MOUSEMOTION:
@@ -78,16 +80,16 @@ def main():
 
         # --- Game Logic (Movement) ---
         # Move the player if the flags are True
-        if M_left:
+        if M_left and PLAYER_RECT.left > 0:
             PLAYER_RECT.x -= MOVEMENT_SPEED
 
-        if M_right:
+        if M_right and PLAYER_RECT.right < 600:
             PLAYER_RECT.x += MOVEMENT_SPEED
 
-        if M_up:
+        if M_up and PLAYER_RECT.top > 0:
             PLAYER_RECT.y -= MOVEMENT_SPEED
 
-        if M_down:
+        if M_down and PLAYER_RECT.bottom < 500:
             PLAYER_RECT.y += MOVEMENT_SPEED
 
         DISPLAY.fill((255,255,255))
