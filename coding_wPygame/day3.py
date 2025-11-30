@@ -30,9 +30,12 @@ def main():
 
     # speed
     MOVEMENT_SPEED = 1
+    BOUNCE = 10  # how strong the bounce is
+
 
     # cursor
     mouse_pos = (0,0)
+    cursor_color = (255,0,0)
 
     # Game Loop
     while True:
@@ -60,6 +63,11 @@ def main():
                 if event.key == K_DOWN or event.key == K_s:
                     M_down = True
 
+                # added a teleportation logic to teleport
+                # to the middle of the screen
+                if event.key == K_SPACE:
+                    PLAYER_RECT.center = (300,250)
+
             if event.type == KEYUP:
 
                 if event.key == K_LEFT or event.key == K_a:
@@ -78,25 +86,46 @@ def main():
                 # Update tuple (x, y)
                 mouse_pos = event.pos
 
-        # --- Game Logic (Movement) ---
-        # Move the player if the flags are True
-        if M_left and PLAYER_RECT.left > 0:
+            if event.type == MOUSEBUTTONDOWN:
+                cursor_color = (0,255,0)
+
+            elif event.type == MOUSEBUTTONUP:
+                cursor_color = (255,0,0)
+
+        # Move player
+        if M_left:
             PLAYER_RECT.x -= MOVEMENT_SPEED
 
-        if M_right and PLAYER_RECT.right < 600:
+        if M_right:
             PLAYER_RECT.x += MOVEMENT_SPEED
 
-        if M_up and PLAYER_RECT.top > 0:
+        if M_up:
             PLAYER_RECT.y -= MOVEMENT_SPEED
 
-        if M_down and PLAYER_RECT.bottom < 500:
+        if M_down:
             PLAYER_RECT.y += MOVEMENT_SPEED
 
-        DISPLAY.fill((255,255,255))
+        # --- Bounce Walls ---
+        if PLAYER_RECT.left < 0:
+            PLAYER_RECT.left = 0
+            PLAYER_RECT.x += BOUNCE
 
-        # Draw Keyboard Player (Blue Square)
+        if PLAYER_RECT.right > WINDOW_WIDTH:
+            PLAYER_RECT.right = WINDOW_WIDTH
+            PLAYER_RECT.x -= BOUNCE
+
+        if PLAYER_RECT.top < 0:
+            PLAYER_RECT.top = 0
+            PLAYER_RECT.y += BOUNCE
+
+        if PLAYER_RECT.bottom > WINDOW_HEIGHT:
+            PLAYER_RECT.bottom = WINDOW_HEIGHT
+            PLAYER_RECT.y -= BOUNCE
+
+
+        DISPLAY.fill((255, 255, 255))
         pygame.draw.rect(DISPLAY, (0, 0, 255), PLAYER_RECT)
-        pygame.draw.circle(DISPLAY, (255, 0, 0), mouse_pos, 20)
+        pygame.draw.circle(DISPLAY, cursor_color, mouse_pos, 20)
         pygame.display.update()
 
 if __name__ == "__main__":
