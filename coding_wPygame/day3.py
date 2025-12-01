@@ -144,12 +144,12 @@ def main():
             PLAYER_RECT.right = WINDOW_WIDTH
             PLAYER_RECT.x -= BOUNCE
 
-        # hitting the right wall
+        # hitting the top wall
         if PLAYER_RECT.top < 0:
             PLAYER_RECT.top = 0
             PLAYER_RECT.y += BOUNCE
 
-        # hitting the right wall
+        # hitting the bottom wall
         if PLAYER_RECT.bottom > WINDOW_HEIGHT:
             PLAYER_RECT.bottom = WINDOW_HEIGHT
             PLAYER_RECT.y -= BOUNCE
