@@ -4,10 +4,10 @@ PONG GAME — TO-DO LIST
 
 TODO:
     📌 STAGE 1 — BASE SETUP
-        - Create the main game window (size, caption, FPS)
-        - Initialize Pygame, Clock(), and delta time (dt)
-        - Create the game loop structure (running = True)
-        - Clear screen + update display every frame
+        - Create the main game window (size, caption, FPS) [DONE]
+        - Initialize Pygame, Clock(), and delta time (dt) 
+        - Create the game loop structure (running = True) [DONE]
+        - Clear screen + update display every frame [DONE]
 
     📌 STAGE 2 — OBJECT CREATION
         - Create paddle rectangles (left & right)
@@ -50,3 +50,46 @@ TODO:
 # ================================= MAIN CODE ===================================
 
 # importing libraries
+import pygame
+import sys
+import pygame.font
+from pygame.locals import *
+from pygame.time import Clock
+
+def main():
+
+    # initialize the pygame
+    pygame.init()
+
+    # display
+    WINDOW_WIDTH = 600
+    WINDOW_HEIGHT = 700
+    DISPLAY = pygame.display.set_mode((WINDOW_WIDTH,WINDOW_HEIGHT))
+
+    # clock
+    clock = Clock()
+    FPS = 60
+
+    # player object
+    PLAYER_OBJ = pygame.Rect(200,500,200,25)
+
+    # color
+    PLAYER_COLOR = (0,0,0)
+
+    # game loop
+    while True:
+
+        for event in pygame.event.get():
+
+            # check for quit
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+
+        DISPLAY.fill((255,255,255))
+        pygame.draw.rect(DISPLAY,PLAYER_COLOR, PLAYER_OBJ)
+        pygame.display.update()
+
+
+if __name__ == "__main__":
+    main()
