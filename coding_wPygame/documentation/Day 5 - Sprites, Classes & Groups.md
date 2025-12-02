@@ -5,7 +5,7 @@ Today we are gonna stop writing "Spaghetti Code" (long lists of unorganized vari
 
 #### 1) Learning Goal
 
-We will learn how to organize your game objects into **Classes** (Blueprints) using `pygame.sprite.Sprite` and manage them efficiently with **Sprite Groups**.
+will learn how to organize your game objects into **Classes** (Blueprints) using `pygame.sprite.Sprite` and manage them efficiently with **Sprite Groups**.
 
 #### 2) Clear Overview
 
@@ -232,6 +232,13 @@ A List-like container (`pygame.sprite.Group`) that holds sprites.
 
 * **`group.draw(screen)`**: Draws every sprite's `image` at its `rect` location.
 
+#### Collision Belongs to the Moving Object
+
+The **Ball** reacts when it hits the Player, so:
+
+- Collision detection is inside `Ball.update()`    
+- The Player does NOT need to know the Ball exists
+
 ---
 
 ## 🛠️ WHAT I DID TODAY
@@ -248,34 +255,68 @@ A List-like container (`pygame.sprite.Group`) that holds sprites.
 
 ## 💻 SOURCE CODE
 
-> [!example]- SOURCE CODE
-> ```python
-> class Player(pygame.sprite.Sprite):
->     def __init__(self):
->         super().__init__()
->         self.image = pygame.Surface((50, 50))
->         self.image.fill((0, 0, 255))
->         self.rect = self.image.get_rect(center=(300, 350))
->         self.pos = pygame.math.Vector2(300, 350) # Advanced vector usage
->         self.speed = 300
-> 
->     def update(self, dt):
->         keys = pygame.key.get_pressed()
->         if keys[K_LEFT]: self.pos.x -= self.speed * dt
->         if keys[K_RIGHT]: self.pos.x += self.speed * dt
->         self.rect.centerx = round(self.pos.x)
-> 
-> # Main Loop Usage
-> all_sprites = pygame.sprite.Group()
-> all_sprites.add(Player())
-> 
-> while True:
->     # ... events ...
->     all_sprites.update(dt)
->     all_sprites.draw(screen)
-> ```
+#### Player Class
 
----
+```python
+class Player(Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill((0, 0, 255))
+        self.rect = self.image.get_rect(center=(300, 500))
+        self.pos_x = float(self.rect.x)
+        self.speed = 300
+
+    def update(self, dt):
+        keys = pygame.key.get_pressed()
+
+        if (keys[K_LEFT] or keys[K_a]) and self.rect.left > 0:
+            self.pos_x -= self.speed * dt
+        if (keys[K_RIGHT] or keys[K_d]) and self.rect.right < 600:
+            self.pos_x += self.speed * dt
+
+        self.rect.x = int(self.pos_x)
+```
+
+#### Ball Class
+
+```python
+class Ball(Sprite):
+    def __init__(self, player):
+        super().__init__()
+        self.image = pygame.Surface((20, 20))
+        self.image.fill((0, 255, 0))
+        self.rect = self.image.get_rect(center=(300, 200))
+
+        self.vel_x = 0
+        self.vel_y = 400
+        self.pos_x = float(self.rect.x)
+        self.pos_y = float(self.rect.y)
+
+        self.player = player  # Used for collision
+
+    def update(self, dt):
+        # Movement
+        self.pos_x += self.vel_x * dt
+        self.pos_y += self.vel_y * dt
+
+        # Wall bounce
+        if self.pos_x <= 0 or self.pos_x >= 580:
+            self.vel_x *= -1
+        if self.pos_y <= 0:
+            self.vel_y *= -1
+
+        # ===== COLLISION WITH PLAYER =====
+        if self.rect.colliderect(self.player.rect):
+            self.vel_y *= -1
+            self.rect.bottom = self.player.rect.top
+            self.pos_y = float(self.rect.y)
+
+        # Sync positions
+        self.rect.x = int(self.pos_x)
+        self.rect.y = int(self.pos_y)
+
+```
 
 ## 🧠 LEARNED TODAY
 
@@ -286,18 +327,29 @@ A List-like container (`pygame.sprite.Group`) that holds sprites.
 * **Self:** Inside a class, `self` refers to "this specific object". `self.rect.x` means "My specific X position".
 
 ---
-
 ## 🧪 PRACTICE / EXERCISES
 
-**Exercise: Multi-Ball**
-Goal: Spawn 5 balls with random speeds.
+### 1. Spawn 3 Balls
 
 ```python
-for i in range(5):
-    b = Ball()
-    b.rect.x = random.randint(0, 600)
+for _ in range(3):
+    b = Ball(player)
+    b.pos_x = random.randint(0, 600)
     all_sprites.add(b)
-````
+```
+
+### 2. Add Spin to Ball Based on Collision Offset
+
+```python
+offset = (self.rect.centerx - self.player.rect.centerx)
+self.vel_x += offset * 5
+```
+
+### 3. Make Ball Faster After Every Paddle Hit
+
+```python
+self.vel_y *= 1.05
+```
 
 ---
 
@@ -318,3 +370,4 @@ for i in range(5):
 >     
 > - Implement "Masks" for pixel-perfect collision (not just boxes).
 
+---
