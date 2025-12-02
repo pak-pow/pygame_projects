@@ -13,21 +13,21 @@ TODO:
         - Create paddle rectangles (left & right) [DONE]
         - Create ball rectangle [DONE]
         - Add variables for paddle speed (px/s) [DONE]
-        - Add variables for ball speed (px/s) + direction vector
+        - Add variables for ball speed (px/s) + direction vector [DONE]
 
     📌 STAGE 3 — PADDLE MOVEMENT
-        - Implement player controls for left paddle (W/S or ↑/↓)
-        - Make paddle movement use delta time (time-based)
-        - Prevent paddles from leaving screen boundaries
+        - Implement player controls for left paddle (W/S or ↑/↓) [DONE]
+        - Make paddle movement use delta time (time-based) [DONE]
+        - Prevent paddles from leaving screen boundaries [DONE]
 
     📌 STAGE 4 — BALL PHYSICS
-        - Move the ball using dt (ball_pos_x, ball_pos_y as floats)
-        - Detect collision with top and bottom walls → bounce
-        - Detect collision with paddles → bounce horizontally
+        - Move the ball using dt (ball_pos_x, ball_pos_y as floats) [DONE]
+        - Detect collision with top and bottom walls → bounce [DONE]
+        - Detect collision with paddles → bounce horizontally [DONE]
         - Add ball speed increase after each paddle hit (optional)
 
     📌 STAGE 5 — SCORING SYSTEM
-        - Detect when ball exits left/right screen
+        - Detect when ball exits the screen [DONE]
         - Add score counters for Player 1 and Player 2
         - Reset ball to center when a point is scored
         - Serve the ball toward the player who was scored on
@@ -54,6 +54,7 @@ import pygame
 import sys
 import pygame.font
 import random
+
 from pygame.locals import *
 from pygame.time import Clock
 
