@@ -5,11 +5,11 @@ Today we are gonna stop writing "Spaghetti Code" (long lists of unorganized vari
 
 #### 1) Learning Goal
 
-will learn how to organize your game objects into **Classes** (Blueprints) using `pygame.sprite.Sprite` and manage them efficiently with **Sprite Groups**.
+will learn how to organize our game objects into **Classes** (Blueprints) using `pygame.sprite.Sprite` and manage them efficiently with **Sprite Groups**.
 
 #### 2) Clear Overview
 
-In your Pong game, you had variables like `BALL_POS_X`, `BALL_SPEED_X`, `PLAYER_POS_X`, etc. If you wanted 10 balls, you'd need 30 new variables! 😱
+In our Pong game, we had variables like `BALL_POS_X`, `BALL_SPEED_X`, `PLAYER_POS_X`, etc. If we wanted 10 balls, you'd need 30 new variables! 😱
 
 With **OOP**, we create a **Class** (a Blueprint).
 
@@ -17,7 +17,6 @@ With **OOP**, we create a **Class** (a Blueprint).
     
 - **Instance:** `ball1`, `ball2`, `ball3` (Actual objects built from the blueprint).
     
-
 Pygame provides a special parent class called **`pygame.sprite.Sprite`**. If we use it, we get powerful tools to manage updating and drawing automatically.
 
 #### 3) Deep Explanation
@@ -155,7 +154,7 @@ while True:
 ---
 #### 5) 20-Minute Drill
 
-**Your Task:** Demonstrate the power of OOP by adding more balls.
+**our Task:** Demonstrate the power of OOP by adding more balls.
 
 1. Create a **second** ball instance (`ball2`) using the `Ball` class.
     
@@ -191,7 +190,7 @@ _Try adding 3 or 4 balls to see how easy it is now._
 
 #### 7) Homework 
 
-Take your **Vertical Pong** code from Day 4 and refactor it completely to use Classes.
+Take our **Vertical Pong** code from Day 4 and refactor it completely to use Classes.
 
 - Create a `Paddle` class.
     
@@ -357,7 +356,7 @@ self.vel_y *= 1.05
 
 > [!important] Parent Initialization:
 > 
-> Always call super().__init__() first inside your class's __init__ method, or the Sprite features won't work.
+> Always call super().__init__() first inside our class's __init__ method, or the Sprite features won't work.
 
 ---
 ## 🎯 GOALS FOR TOMORROW
