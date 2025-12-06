@@ -92,10 +92,10 @@ class Player(Sprite):
 
         self.velocity.x = 0
 
-        if keys[K_LEFT]:
+        if keys[K_LEFT] or keys[K_a]:
             self.velocity.x = -Main.MOVE_SPEED
 
-        if keys[K_RIGHT]:
+        if keys[K_RIGHT] or keys[K_d]:
             self.velocity.x = Main.MOVE_SPEED
 
         self.velocity.y += Main.GRAVITY * dt
