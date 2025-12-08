@@ -123,23 +123,46 @@ class Entity:
         if abs(self.knockback_x) < 0.1: self.knockback_x = 0
         if abs(self.knockback_y) < 0.1: self.knockback_y = 0
 
+        # --- FIX STARTS HERE ---
     def check_wall_collision(self, dx, dy, grid):
-        new_wx = self.wx + dx
-        if not check_grid_collision(new_wx, self.wy, grid):
-            self.wx = new_wx
+            """
+            Updated to check the 'leading edge' of the entity based on radius.
+            This prevents the sprite from clipping halfway into walls.
+            """
+            margin = self.radius
 
-        new_wy = self.wy + dy
-        if not check_grid_collision(self.wx, new_wy, grid):
-            self.wy = new_wy
+            # 1. Try Moving X
+            # We determine which side of the player is "leading" the movement
+            if dx > 0:
+                check_x = self.wx + dx + margin
+            else:
+                check_x = self.wx + dx - margin
 
-        self.wx = clamp(self.wx, 0.5, MAP_W - 0.5)
-        self.wy = clamp(self.wy, 0.5, MAP_H - 0.5)
+            # Check if that edge hits a wall
+            if not check_grid_collision(check_x, self.wy, grid):
+                self.wx += dx
+
+            # 2. Try Moving Y
+            if dy > 0:
+                check_y = self.wy + dy + margin
+            else:
+                check_y = self.wy + dy - margin
+
+            # Check if that edge hits a wall
+            if not check_grid_collision(self.wx, check_y, grid):
+                self.wy += dy
+
+            # Clamp to map boundaries (keeping radius inside)
+            self.wx = clamp(self.wx, 0.5 + margin, MAP_W - 0.5 - margin)
+            self.wy = clamp(self.wy, 0.5 + margin, MAP_H - 0.5 - margin)
+
+        # --- FIX ENDS HERE ---
 
     def draw_shadow(self, surf, cam):
-        sx, sy = cam.world_to_screen(self.wx, self.wy)
-        shadow_w = 30 * cam.zoom
-        shadow_h = 10 * cam.zoom
-        pygame.draw.ellipse(surf, (0,0,0, 100), (sx - shadow_w//2, sy + shadow_h//2, shadow_w, shadow_h))
+            sx, sy = cam.world_to_screen(self.wx, self.wy)
+            shadow_w = 30 * cam.zoom
+            shadow_h = 10 * cam.zoom
+            pygame.draw.ellipse(surf, (0, 0, 0, 100), (sx - shadow_w // 2, sy + shadow_h // 2, shadow_w, shadow_h))
 
     def draw(self, surf, cam):
         pass

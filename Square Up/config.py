@@ -4,7 +4,7 @@
 # ==========================================
 
 SCREEN_W, SCREEN_H = 1280, 720
-FPS = 60
+FPS = 120
 
 # World Settings
 TILE_W_BASE, TILE_H_BASE = 96, 48

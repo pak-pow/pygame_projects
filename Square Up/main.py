@@ -199,37 +199,40 @@ class Game:
         self.fog.set_alpha(150)
         self.screen.blit(self.fog, (0, 0))
 
+        # 1. UPDATE draw_hud TO SHOW NEW CONTROLS
     def draw_hud(self):
-        infos = [
-            f"Level: {self.level}",
-            f"Wave Progress: {self.enemies_killed_in_wave} / {self.enemies_to_spawn}",
-            f"Money: ${int(self.player.money)}",
-            f"Weapon: {self.player.weapon_type.upper()}",
-            f"Grenades: {self.player.grenade_count}",
-            f"Drones: {len(self.player.drones)}"
-        ]
+            infos = [
+                f"Level: {self.level}",
+                f"Wave Progress: {self.enemies_killed_in_wave} / {self.enemies_to_spawn}",
+                f"Money: ${int(self.player.money)}",
+                f"Weapon: {self.player.weapon_type.upper()}",
+                f"Grenades: {self.player.grenade_count}",
+                f"Drones: {len(self.player.drones)}"
+            ]
 
-        for i, text in enumerate(infos):
-            surf = self.font.render(text, True, COL_TEXT)
-            shadow = self.font.render(text, True, (0,0,0))
-            self.screen.blit(shadow, (11, 11 + i * 25))
-            self.screen.blit(surf, (10, 10 + i * 25))
+            for i, text in enumerate(infos):
+                surf = self.font.render(text, True, COL_TEXT)
+                shadow = self.font.render(text, True, (0, 0, 0))
+                self.screen.blit(shadow, (11, 11 + i * 25))
+                self.screen.blit(surf, (10, 10 + i * 25))
 
-        hint = "Scroll: Zoom | Shift: Dash | RMB: Grenade"
-        hint_surf = self.font.render(hint, True, (150, 150, 150))
-        self.screen.blit(hint_surf, (SCREEN_W - hint_surf.get_width() - 10, 10))
+            # UPDATED HINT TEXT
+            hint = "Scroll: Zoom | Shift: Dash | SPACE: Rotate View | ENTER: Next Wave"
+            hint_surf = self.font.render(hint, True, (150, 150, 150))
+            self.screen.blit(hint_surf, (SCREEN_W - hint_surf.get_width() - 10, 10))
 
-        if not self.wave_active:
-            overlay = pygame.Surface((SCREEN_W, 250))
-            overlay.fill((0, 0, 0))
-            overlay.set_alpha(180)
-            self.screen.blit(overlay, (0, SCREEN_H - 250))
+            if not self.wave_active:
+                overlay = pygame.Surface((SCREEN_W, 250))
+                overlay.fill((0, 0, 0))
+                overlay.set_alpha(180)
+                self.screen.blit(overlay, (0, SCREEN_H - 250))
 
-            msg = self.shop_font.render("SHOP OPEN - Press SPACE for Next Wave", True, (100, 255, 100))
-            self.screen.blit(msg, (SCREEN_W // 2 - msg.get_width() // 2, SCREEN_H - 290))
+                # UPDATED SHOP TEXT
+                msg = self.shop_font.render("SHOP OPEN - Press ENTER for Next Wave", True, (100, 255, 100))
+                self.screen.blit(msg, (SCREEN_W // 2 - msg.get_width() // 2, SCREEN_H - 290))
 
-            for b in self.buttons:
-                b.draw(self.screen, self.font, self.player.money)
+                for b in self.buttons:
+                    b.draw(self.screen, self.font, self.player.money)
 
     def draw_game_over(self):
         self.screen.fill((20, 0, 0))
@@ -257,8 +260,15 @@ class Game:
                     if event.y < 0: self.cam.zoom_out()
                 elif event.type == KEYDOWN:
                     if event.key == K_ESCAPE: running = False
-                    if event.key == K_SPACE and not self.wave_active and not self.game_over:
+
+                    # CHANGED: SPACE ROTATES CAMERA
+                    if event.key == K_SPACE:
+                        self.cam.rotate_view()
+
+                    # CHANGED: ENTER STARTS NEXT LEVEL
+                    if event.key == K_RETURN and not self.wave_active and not self.game_over:
                         self.start_next_level()
+
                     if event.key == K_r and self.game_over:
                         self.reset_game()
                 elif event.type == MOUSEBUTTONDOWN:
@@ -267,28 +277,41 @@ class Game:
                             for b in self.buttons:
                                 b.click(mx, my, self.player)
                     elif event.button == 3:
-                         if self.player.grenade_count > 0 and not self.game_over:
-                             m_wx, m_wy = self.cam.screen_to_world(mx, my)
-                             g = Grenade(self.player.wx, self.player.wy, m_wx, m_wy)
-                             self.grenades.append(g)
-                             self.player.grenade_count -= 1
+                        if self.player.grenade_count > 0 and not self.game_over:
+                            m_wx, m_wy = self.cam.screen_to_world(mx, my)
+                            g = Grenade(self.player.wx, self.player.wy, m_wx, m_wy)
+                            self.grenades.append(g)
+                            self.player.grenade_count -= 1
 
             if self.game_over:
                 self.draw_game_over()
                 continue
 
+            # MOVEMENT INPUT - ADJUSTED FOR ROTATION
             keys = pygame.key.get_pressed()
             if keys[K_LSHIFT]: self.player.attempt_dash()
-            vx = 0; vy = 0
-            if keys[K_w] or keys[K_UP]: vy = -1
-            if keys[K_s] or keys[K_DOWN]: vy = 1
-            if keys[K_a] or keys[K_LEFT]: vx = -1
-            if keys[K_d] or keys[K_RIGHT]: vx = 1
 
-            if vx!=0 or vy!=0:
+            raw_vx = 0
+            raw_vy = 0
+            if keys[K_w] or keys[K_UP]: raw_vy = -1
+            if keys[K_s] or keys[K_DOWN]: raw_vy = 1
+            if keys[K_a] or keys[K_LEFT]: raw_vx = -1
+            if keys[K_d] or keys[K_RIGHT]: raw_vx = 1
+
+            # FIX: Apply INVERSE Rotation so controls stay relative to the SCREEN
+            # If the camera rotates +Angle, we rotate inputs -Angle to compensate.
+            c = math.cos(self.cam.angle)
+            s = math.sin(self.cam.angle)
+
+            # Inverse Rotation Formula:
+            # new_x = x * cos + y * sin
+            # new_y = -x * sin + y * cos
+            vx = raw_vx * c + raw_vy * s
+            vy = -raw_vx * s + raw_vy * c
+
+            if vx != 0 or vy != 0:
                 l = math.hypot(vx, vy)
-                vx/=l
-                vy/=l
+                vx /= l
                 speed = self.player.stats["speed"]
                 if self.player.is_dashing:
                     speed *= 3.0
@@ -401,7 +424,7 @@ class Game:
             render_list.extend(self.enemies)
             render_list.extend(self.walls)
 
-            render_list.sort(key=lambda x: x.get_sort_y())
+            render_list.sort(key=lambda x: self.cam.world_to_screen(x.wx, x.wy)[1])
 
             for entity in render_list:
                 entity.draw(self.screen, self.cam)
