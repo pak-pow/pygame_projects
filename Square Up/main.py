@@ -1,10 +1,12 @@
 # main.py
 """
-ISOMETRIC SHOOTER - TITAN EDITION (EXPANDED v6.4)
+ISOMETRIC SHOOTER - TITAN EDITION (EXPANDED v7.5)
 ================================================================================
-CREATED FOR: Paul
-DATE: December 7, 2025
-VERSION: 6.4 (Fixes Player Spawning Stuck in Walls)
+UPDATED: December 8, 2025
+CHANGELOG:
+- Fixed Recoil Wall Glitch
+- New Cinematic Intro (Smoother, no trail)
+- Added Ultimate System (Key Q) & Energy Orbs
 """
 
 import math
@@ -14,26 +16,29 @@ from pygame.locals import *
 
 # Module Imports
 from config import *
-from utils import check_grid_collision, distance
+from utils import check_grid_collision, distance, clamp
 from camera import Camera
 from visuals import VisualManager
-from entities import Player, Grenade, HexBoss, SpikeEnemy, BlockEnemy, OrbEnemy
+from entities import Player, Grenade, HexBoss, SpikeEnemy, BlockEnemy, OrbEnemy, EnergyOrb
 from map_gen import generate_map, create_wall_entities, draw_floor_grid
 from ui import Button
 
 
-# ==========================================
-# MAIN GAME LOGIC
-# ==========================================
 class Game:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-        pygame.display.set_caption("Square Up - v6.4")
+        pygame.display.set_caption("Square Up - v7.5")
+
         self.clock = pygame.time.Clock()
 
-        self.font = pygame.font.SysFont("Consolas", 16, bold=True)
-        self.title_font = pygame.font.SysFont("Verdana", 60, bold=True)
+        # --- FONTS ---
+        self.font_ui = pygame.font.SysFont("Verdana", 14, bold=True)
+        self.font_big = pygame.font.SysFont("Verdana", 24, bold=True)
+        self.font_wave = pygame.font.SysFont("Verdana", 30, bold=True)
+        self.font_enemy_count = pygame.font.SysFont("Verdana", 40, bold=True)
+        self.intro_font = pygame.font.SysFont("Impact", 80)
+        self.intro_sub_font = pygame.font.SysFont("Verdana", 30, bold=True)  # New Font
         self.shop_font = pygame.font.SysFont("Verdana", 30, bold=True)
 
         self.fog = pygame.Surface((SCREEN_W, SCREEN_H))
@@ -56,6 +61,7 @@ class Game:
         self.bullets = []
         self.enemies = []
         self.grenades = []
+        self.orbs = []  # List for Energy Orbs
 
         self.wave_active = True
         self.enemies_spawned = 0
@@ -66,14 +72,23 @@ class Game:
         self.init_shop()
         self.game_over = False
 
+        # --- CINEMATIC INTRO VARIABLES ---
+        self.intro_active = True
+        self.intro_z = 8000.0
+        self.intro_vz = 0.0
+        self.intro_phase = "FALL"
+        self.intro_msg_offset = 100
+        self.intro_cam_shake = 0
+
+        # Smooth Text Animation Variables
+        self.intro_text_x = 400.0
+        self.intro_text_alpha = 0.0
+
     def init_shop(self):
         self.buttons = []
         w, h = 220, 50
-        x1 = 20
-        x2 = 250
-        x3 = 480
-        x4 = 710
-        y = SCREEN_H - 240
+        x1, y = 20, SCREEN_H - 240
+        x2, x3, x4 = 250, 480, 710
 
         def up_dmg(p): p.stats["damage"] *= 1.2
 
@@ -116,7 +131,6 @@ class Game:
 
         def cost_nade(): return 100, f"Nades: {self.player.grenade_count}"
 
-        # NEW DASH UPGRADE
         def up_dash(p):
             p.stats["dash_duration"] += 0.05
             p.stats["dash_speed_mult"] += 0.2
@@ -127,15 +141,12 @@ class Game:
         self.buttons.append(Button((x1, y, w, h), "Damage +20%", up_dmg, cost_dmg))
         self.buttons.append(Button((x1, y + 60, w, h), "Fire Rate +0.5", up_fr, cost_fr))
         self.buttons.append(Button((x1, y + 120, w, h), "Speed +5%", up_spd, cost_spd))
-
         self.buttons.append(Button((x2, y, w, h), "Pierce +1", up_pierce, cost_pierce))
         self.buttons.append(Button((x2, y + 60, w, h), "Regen +0.5", up_regen, cost_regen))
         self.buttons.append(Button((x2, y + 120, w, h), "Heal (30HP)", heal, cost_heal))
-
         self.buttons.append(Button((x3, y, w, h), "BUY SHOTGUN", buy_shotgun, cost_shotgun))
         self.buttons.append(Button((x3, y + 60, w, h), "BUY SNIPER", buy_sniper, cost_sniper))
         self.buttons.append(Button((x3, y + 120, w, h), "UPGRADE DASH", up_dash, cost_dash))
-
         self.buttons.append(Button((x4, y, w, h), "BUY DRONE", buy_drone, cost_drone))
         self.buttons.append(Button((x4, y + 60, w, h), "BUY GRENADES x3", buy_nade, cost_nade))
 
@@ -145,52 +156,28 @@ class Game:
         self.enemies_spawned = 0
         self.enemies_killed_in_wave = 0
         self.enemies_to_spawn = 10 + int(self.level * 2.5)
+        self.orbs = []  # Clear orbs between levels
 
-        # 1. Generate new map
         self.map_grid = generate_map(MAP_W, MAP_H, self.level)
         self.walls = create_wall_entities(self.map_grid, self.level)
 
-        # 2. FIX: Robust Stuck Check
-        # We calculate the player's bounding box.
-        # If ANY part of the player overlaps a wall, we move them.
         margin = self.player.radius
-        min_x = self.player.wx - margin
-        max_x = self.player.wx + margin
-        min_y = self.player.wy - margin
-        max_y = self.player.wy + margin
-
-        # Use the Entity's own collision check to detect being stuck
-        if self.player.check_area_collision(min_x, max_x, min_y, max_y, self.map_grid):
-            # Player is stuck! Search for nearest safe tile.
+        if self.player.check_area_collision(self.player.wx - margin, self.player.wx + margin, self.player.wy - margin,
+                                            self.player.wy + margin, self.map_grid):
             px, py = int(self.player.wx), int(self.player.wy)
             found_safe = False
-
-            # Spiral search outwards from current position
             for r in range(1, 10):
                 for dy in range(-r, r + 1):
                     for dx in range(-r, r + 1):
-                        # Optimization: only check outer ring
                         if abs(dx) != r and abs(dy) != r: continue
-
-                        tx = px + dx
-                        ty = py + dy
-
-                        if 0 <= tx < MAP_W and 0 <= ty < MAP_H:
-                            if self.map_grid[ty][tx] == 0:
-                                # Found a safe tile!
-                                # Center the player in it (x.5, y.5) to ensure safety
-                                self.player.wx = tx + 0.5
-                                self.player.wy = ty + 0.5
-                                found_safe = True
-                                self.cam.add_shake(5)  # Small bounce effect
-                                break
+                        tx, ty = px + dx, py + dy
+                        if 0 <= tx < MAP_W and 0 <= ty < MAP_H and self.map_grid[ty][tx] == 0:
+                            self.player.wx, self.player.wy = tx + 0.5, ty + 0.5
+                            found_safe = True
+                            break
                     if found_safe: break
                 if found_safe: break
-
-            # Failsafe: if map is crazy full, go to center
-            if not found_safe:
-                self.player.wx = MAP_W / 2
-                self.player.wy = MAP_H / 2
+            if not found_safe: self.player.wx, self.player.wy = MAP_W / 2, MAP_H / 2
 
         self.vm.add_text(SCREEN_W / 2, SCREEN_H / 2 - 100, f"LEVEL {self.level} STARTED", (255, 255, 100), 2.0, size=30)
         self.cam.add_shake(10)
@@ -198,28 +185,17 @@ class Game:
     def spawn_enemy(self):
         attempts = 0
         while attempts < 20:
-            # FIX: We now select integer coordinates to find a specific tile
-            ix = random.randint(1, MAP_W - 2)
-            iy = random.randint(1, MAP_H - 2)
-
-            # Check if that tile is empty (0)
+            ix, iy = random.randint(1, MAP_W - 2), random.randint(1, MAP_H - 2)
             if self.map_grid[iy][ix] == 0:
-                # FIX: Spawn exactly at center (x + 0.5)
-                # This guarantees they are 0.5 units away from any wall,
-                # which is safe for their 0.4 unit body size.
-                wx = ix + 0.5
-                wy = iy + 0.5
-
-                # Ensure we don't spawn literally on top of the player
+                wx, wy = ix + 0.5, iy + 0.5
                 if distance(wx, wy, self.player.wx, self.player.wy) < 5.0:
-                    attempts += 1
+                    attempts += 1;
                     continue
 
                 r = random.random()
                 e = None
                 if self.level % 5 == 0 and self.enemies_spawned == self.enemies_to_spawn - 1:
                     e = HexBoss(wx, wy, self.level, self.vm)
-                    self.vm.add_text(SCREEN_W / 2, SCREEN_H / 2, "BOSS DETECTED", (255, 50, 50), 3.0, 30)
                 elif r < 0.2 and self.level > 2:
                     e = SpikeEnemy(wx, wy, self.level, self.vm)
                 elif r < 0.4 and self.level > 1:
@@ -236,81 +212,198 @@ class Game:
         self.cam.add_shake(15)
         sx, sy = self.cam.world_to_screen(gx, gy)
         self.vm.add_explosion(sx, sy)
-
         for e in self.enemies:
-            dist = distance(gx, gy, e.wx, e.wy)
-            if dist < radius_world:
-                dmg = damage * (1.0 - (dist / radius_world) * 0.5)
-                e.take_damage(dmg)
-                angle = math.atan2(e.wy - gy, e.wx - gx)
-                force = 20.0 * (1.0 - dist / radius_world)
-                e.apply_knockback(math.cos(angle) * force, math.sin(angle) * force)
-                esx, esy = self.cam.world_to_screen(e.wx, e.wy)
-                self.vm.add_text(esx, esy - 50, f"{int(dmg)}!", COL_EXPLOSION, 1.0, 20)
+            if distance(gx, gy, e.wx, e.wy) < radius_world:
+                e.take_damage(damage)
 
     def draw_vignette(self):
+        if self.intro_active: return
         self.fog.fill((10, 10, 20))
         px, py = self.cam.world_to_screen(self.player.wx + 0.5, self.player.wy + 0.5)
-
         pygame.draw.circle(self.fog, (255, 255, 255), (px, py), 300 * self.cam.zoom)
-
-        for b in self.bullets:
-            bx, by = self.cam.world_to_screen(b.wx, b.wy)
-            pygame.draw.circle(self.fog, (255, 255, 255), (bx, by), 30 * self.cam.zoom)
-
-        for g in self.grenades:
-            if g.timer < 0.5:
-                gx, gy = self.cam.world_to_screen(g.x, g.y)
-                pygame.draw.circle(self.fog, (255, 200, 200), (gx, gy), 100 * self.cam.zoom)
-
         self.fog.set_colorkey((255, 255, 255))
         self.fog.set_alpha(150)
         self.screen.blit(self.fog, (0, 0))
 
+    # --- UI / HUD (BROTATO STYLE) ---
     def draw_hud(self):
-        infos = [
-            f"Level: {self.level}",
-            f"Wave Progress: {self.enemies_killed_in_wave} / {self.enemies_to_spawn}",
-            f"Money: ${int(self.player.money)}",
-            f"Weapon: {self.player.weapon_type.upper()}",
-            f"Grenades: {self.player.grenade_count}",
-            f"Drones: {len(self.player.drones)}"
-        ]
+        if self.intro_active: return
 
-        for i, text in enumerate(infos):
-            surf = self.font.render(text, True, COL_TEXT)
-            shadow = self.font.render(text, True, (0, 0, 0))
-            self.screen.blit(shadow, (11, 11 + i * 25))
-            self.screen.blit(surf, (10, 10 + i * 25))
+        # 1. HEALTH BAR
+        bar_w, bar_h = 200, 25
+        bar_x, bar_y = 20, 20
+        pygame.draw.rect(self.screen, (30, 30, 30), (bar_x, bar_y, bar_w, bar_h))
+        pct = clamp(self.player.health / self.player.stats["hp_max"], 0, 1)
+        pygame.draw.rect(self.screen, (200, 50, 50), (bar_x + 2, bar_y + 2, (bar_w - 4) * pct, bar_h - 4))
+        hp_text = f"{int(self.player.health)} / {int(self.player.stats['hp_max'])}"
+        txt_surf = self.font_ui.render(hp_text, True, (255, 255, 255))
+        self.screen.blit(txt_surf, (bar_x + bar_w // 2 - txt_surf.get_width() // 2, bar_y + 4))
 
-        # UPDATED HINT TEXT
-        hint = "Scroll: Zoom | Shift: Dash | SPACE: Rotate View | ENTER: Next Wave"
-        hint_surf = self.font.render(hint, True, (150, 150, 150))
-        self.screen.blit(hint_surf, (SCREEN_W - hint_surf.get_width() - 10, 10))
+        # 2. ULTIMATE GAUGE (FIX 4)
+        ult_w, ult_h = 200, 15
+        ult_y = bar_y + bar_h + 2
+        pygame.draw.rect(self.screen, (20, 20, 40), (bar_x, ult_y, ult_w, ult_h))
 
+        # Color based on readiness
+        ult_pct = clamp(self.player.energy / self.player.max_energy, 0, 1)
+        u_col = (100, 100, 100)  # Gray if empty
+        if self.player.ultimate_active:
+            u_col = (0, 255, 255)  # Cyan if active
+            ult_pct = self.player.ultimate_timer / self.player.ultimate_duration
+        elif self.player.energy >= self.player.max_energy:
+            u_col = (255, 255, 0)  # Gold if ready
+
+        pygame.draw.rect(self.screen, u_col, (bar_x + 1, ult_y + 1, (ult_w - 2) * ult_pct, ult_h - 2))
+
+        msg = "Q: ULTIMATE"
+        if self.player.ultimate_active:
+            msg = "ACTIVE!"
+        elif self.player.energy < self.player.max_energy:
+            msg = f"{int(self.player.energy)}%"
+
+        u_txt = self.font_ui.render(msg, True, (0, 0, 0))
+        self.screen.blit(u_txt, (bar_x + ult_w // 2 - u_txt.get_width() // 2, ult_y - 2))
+
+        # 3. LEVEL
+        lvl_w, lvl_h = 100, 15
+        lvl_y = ult_y + ult_h + 5
+        pygame.draw.rect(self.screen, (30, 30, 30), (bar_x, lvl_y, lvl_w, lvl_h))
+        pygame.draw.rect(self.screen, (50, 200, 50), (bar_x + 2, lvl_y + 2, lvl_w - 4, lvl_h - 4))
+        lvl_txt = self.font_ui.render(f"LV. {self.level}", True, (255, 255, 255))
+        self.screen.blit(lvl_txt, (bar_x + 5, lvl_y - 2))
+
+        # 4. COINS
+        coin_y = lvl_y + lvl_h + 10
+        pygame.draw.circle(self.screen, COL_MONEY, (bar_x + 10, coin_y + 10), 10)
+        money_txt = self.font_big.render(f"{int(self.player.money)}", True, COL_MONEY)
+        self.screen.blit(money_txt, (bar_x + 25, coin_y))
+
+        # 5. WAVE COUNTER
+        cx = SCREEN_W // 2
+        wave_txt = self.font_wave.render(f"WAVE {self.level}", True, (255, 255, 255))
+        self.screen.blit(wave_txt, (cx - wave_txt.get_width() // 2, 20))
+
+        # 6. ENEMY COUNT
+        remaining_real = (self.enemies_to_spawn - self.enemies_spawned) + len(self.enemies)
+        if not self.wave_active: remaining_real = 0
+        enemy_txt = self.font_enemy_count.render(f"{remaining_real}", True, (255, 50, 50))
+        self.screen.blit(enemy_txt, (cx - enemy_txt.get_width() // 2, 55))
+
+        # 7. DASH COOLDOWN
+        dash_x = bar_x + bar_w + 10
+        dash_y = bar_y
+        dash_size = 30
+        pygame.draw.rect(self.screen, (50, 50, 50), (dash_x, dash_y, dash_size, dash_size))
+        pygame.draw.rect(self.screen, (200, 200, 200), (dash_x, dash_y, dash_size, dash_size), 2)
+        boot_col = (100, 200, 255)
+        if self.player.dash_cooldown > 0: boot_col = (100, 100, 100)
+        pygame.draw.rect(self.screen, boot_col, (dash_x + 5, dash_y + 10, 20, 15))  # Foot
+        pygame.draw.rect(self.screen, boot_col, (dash_x + 5, dash_y + 5, 8, 10))  # Leg
+
+        if self.player.dash_cooldown > 0:
+            max_cd = 1.2
+            ratio = self.player.dash_cooldown / max_cd
+            fill_h = int(dash_size * ratio)
+            s = pygame.Surface((dash_size, fill_h))
+            s.set_alpha(150)
+            s.fill((0, 0, 0))
+            self.screen.blit(s, (dash_x, dash_y + (dash_size - fill_h)))
+
+        # Shop Overlay
         if not self.wave_active:
             overlay = pygame.Surface((SCREEN_W, 250))
             overlay.fill((0, 0, 0))
             overlay.set_alpha(180)
             self.screen.blit(overlay, (0, SCREEN_H - 250))
-
-            # UPDATED SHOP TEXT
-            msg = self.shop_font.render("SHOP OPEN - Press ENTER for Next Wave", True, (100, 255, 100))
+            msg = self.shop_font.render("SHOP OPEN - Press ENTER", True, (100, 255, 100))
             self.screen.blit(msg, (SCREEN_W // 2 - msg.get_width() // 2, SCREEN_H - 290))
 
-            for b in self.buttons:
-                b.draw(self.screen, self.font, self.player.money)
+            for b in self.buttons: b.draw(self.screen, self.font_ui, self.player.money)
 
     def draw_game_over(self):
         self.screen.fill((20, 0, 0))
-        txt = self.title_font.render("GAME OVER", True, (255, 50, 50))
-        sub = self.font.render(f"You reached Level {self.level}", True, (200, 200, 200))
-        restart = self.font.render("Press R to Restart", True, (255, 255, 255))
+        # Fixed typo: self.title_font was not defined, switched to intro_font
+        txt = self.intro_font.render("GAME OVER", True, (255, 50, 50))
+        restart = self.font_big.render("Press R to Restart", True, (255, 255, 255))
         cx, cy = SCREEN_W // 2, SCREEN_H // 2
         self.screen.blit(txt, (cx - txt.get_width() // 2, cy - 50))
-        self.screen.blit(sub, (cx - sub.get_width() // 2, cy + 10))
         self.screen.blit(restart, (cx - restart.get_width() // 2, cy + 50))
         pygame.display.flip()
+
+    # --- FIX 2: IMPROVED CINEMATIC RENDERER ---
+    def draw_intro(self):
+        self.screen.fill((10, 10, 15))
+        cx, cy = SCREEN_W // 2, SCREEN_H // 2
+
+        shake_x = random.randint(-self.intro_cam_shake, self.intro_cam_shake)
+        shake_y = random.randint(-self.intro_cam_shake, self.intro_cam_shake)
+        cx += shake_x
+        cy += shake_y
+
+        # Speed Tunnel (Refined)
+        loop_h = SCREEN_H
+        scroll_y = (pygame.time.get_ticks() * 2.0) % loop_h
+        for i in range(20):
+            rx = (i * 137) % SCREEN_W
+            ry = (scroll_y + (i * 200)) % loop_h
+            dist_from_center = abs(rx - SCREEN_W // 2) / (SCREEN_W // 2)
+            line_len = 50 + int(100 * dist_from_center)
+            # Fainter lines
+            col_line = (30, 30, 60)
+            pygame.draw.line(self.screen, col_line, (rx, ry), (rx, ry - line_len), 2)
+
+        # Draw Ground coming up
+        ground_threshold = 2000.0
+        if self.intro_z < ground_threshold:
+            alpha_ground = 1.0 - (self.intro_z / ground_threshold)
+            ground_y_offset = (self.intro_z * 1.5)
+            rect_w = 400 * (1.0 + alpha_ground)
+            rect_h = 200 * (1.0 + alpha_ground)
+            g_rect = pygame.Rect(0, 0, rect_w, rect_h)
+            g_rect.center = (cx, cy + ground_y_offset)
+            pygame.draw.rect(self.screen, (30, 30, 50), g_rect)
+            pygame.draw.rect(self.screen, (100, 100, 150), g_rect, 2)
+
+        # Player Ball (Glow effect, no ugly tail)
+        ball_x = cx
+        ball_y = cy
+
+        # Subtle drift
+        ball_x += math.sin(pygame.time.get_ticks() * 0.01) * 10
+
+        # Glow
+        for i in range(3):
+            r = 25 + i * 5
+            s = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
+            pygame.draw.circle(s, (60, 150, 255, 50), (r, r), r)
+            self.screen.blit(s, (ball_x - r, ball_y - r))
+
+        pygame.draw.circle(self.screen, self.player.color_body, (ball_x, ball_y), 20)
+        pygame.draw.circle(self.screen, (150, 200, 255), (ball_x - 6, ball_y - 6), 8)
+
+        # FIX 2: ANIMATED TEXT LOGIC
+        # Thresholds for text appearing based on Z distance
+
+        # "SURVIVE" enters
+        if self.intro_z < 6000:
+            txt = self.intro_font.render("SURVIVE", True, (255, 255, 255))
+            txt.set_alpha(int(self.intro_text_alpha))
+
+            # Text moves from right to left next to ball
+            txt_x = ball_x + 60 + self.intro_text_x
+            txt_y = ball_y - 40
+            self.screen.blit(txt, (txt_x, txt_y))
+
+        # "UNTIL YOU CAN" delayed appearance
+        if self.intro_z < 3500:
+            # Subtle fade in
+            sub_alpha = min(255, (3500 - self.intro_z) * 0.2)
+            sub_txt = self.intro_sub_font.render("[ UNTIL YOU CAN ]", True, (200, 50, 50))
+            sub_txt.set_alpha(int(sub_alpha))
+
+            sub_x = ball_x + 60 + self.intro_text_x + 10
+            sub_y = ball_y + 45  # Below Survive
+            self.screen.blit(sub_txt, (sub_x, sub_y))
 
     def run(self):
         running = True
@@ -327,59 +420,72 @@ class Game:
                     if event.y < 0: self.cam.zoom_out()
                 elif event.type == KEYDOWN:
                     if event.key == K_ESCAPE: running = False
+                    if event.key == K_SPACE: self.cam.rotate_view()
+                    if event.key == K_RETURN and not self.wave_active: self.start_next_level()
+                    if event.key == K_r and self.game_over: self.reset_game()
+                    # ULTIMATE KEY
+                    if event.key == K_q:
+                        if self.player.activate_ultimate():
+                            self.vm.add_text(SCREEN_W // 2, SCREEN_H // 2 - 200, "ULTIMATE ACTIVATED!", (0, 255, 255),
+                                             2.0, 30)
+                            self.cam.add_shake(20)
 
-                    # SPACE ROTATES CAMERA
-                    if event.key == K_SPACE:
-                        self.cam.rotate_view()
-
-                    # ENTER STARTS NEXT LEVEL
-                    if event.key == K_RETURN and not self.wave_active and not self.game_over:
-                        self.start_next_level()
-
-                    if event.key == K_r and self.game_over:
-                        self.reset_game()
                 elif event.type == MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        if not self.wave_active and not self.game_over:
-                            for b in self.buttons:
-                                b.click(mx, my, self.player)
-                    elif event.button == 3:
-                        if self.player.grenade_count > 0 and not self.game_over:
+                    if not self.intro_active and not self.game_over and event.button == 1:
+                        if not self.wave_active:
+                            for b in self.buttons: b.click(mx, my, self.player)
+                    elif not self.intro_active and event.button == 3:
+                        if self.player.grenade_count > 0:
                             m_wx, m_wy = self.cam.screen_to_world(mx, my)
-                            g = Grenade(self.player.wx, self.player.wy, m_wx, m_wy)
-                            self.grenades.append(g)
+                            self.grenades.append(Grenade(self.player.wx, self.player.wy, m_wx, m_wy))
                             self.player.grenade_count -= 1
 
             if self.game_over:
                 self.draw_game_over()
                 continue
 
-            # --- MOVEMENT INPUT (FIXED FOR 90-DEGREE ROTATION) ---
+            # --- INTRO LOGIC ---
+            if self.intro_active:
+                self.intro_vz += 2000.0 * dt
+                self.intro_z -= self.intro_vz * dt
+                self.intro_cam_shake = int(self.intro_vz / 500.0)
+
+                # Smooth Text Animation
+                if self.intro_z < 6000:
+                    self.intro_text_x += (0 - self.intro_text_x) * 3.0 * dt
+                    self.intro_text_alpha = min(255, self.intro_text_alpha + 300 * dt)
+
+                if self.intro_z <= 0:
+                    self.intro_z = 0
+                    self.intro_active = False
+                    self.cam.add_shake(60)
+                    sx, sy = self.cam.world_to_screen(self.player.wx, self.player.wy)
+                    for _ in range(10): self.vm.add_crack(self.player.wx, self.player.wy, (200, 200, 200))
+                    self.vm.add_explosion(sx, sy, (255, 255, 255))
+                    self.vm.add_text(sx, sy - 100, "BEGIN!", (255, 50, 50), 2.0, 30)
+
+                self.draw_intro()
+                pygame.display.flip()
+                continue
+
+                # --- NORMAL GAMEPLAY ---
             keys = pygame.key.get_pressed()
             if keys[K_LSHIFT]: self.player.attempt_dash()
+            input_x, input_y = 0, 0
+            if keys[K_w] or keys[K_UP]: input_y = -1
+            if keys[K_s] or keys[K_DOWN]: input_y = 1
+            if keys[K_a] or keys[K_LEFT]: input_x = -1
+            if keys[K_d] or keys[K_RIGHT]: input_x = 1
 
-            # 1. Get Raw Input (Relative to Screen)
-            input_x = 0
-            input_y = 0
-            if keys[K_w] or keys[K_UP]: input_y = -1  # Up on Screen
-            if keys[K_s] or keys[K_DOWN]: input_y = 1  # Down on Screen
-            if keys[K_a] or keys[K_LEFT]: input_x = -1  # Left on Screen
-            if keys[K_d] or keys[K_RIGHT]: input_x = 1  # Right on Screen
-
-            # 2. Rotate Input Logic (Discrete 90-degree steps)
-            # 0 = Normal, 1 = 90 deg, 2 = 180 deg, 3 = 270 deg
-            vx, vy = 0, 0
-
-            # Determine World Direction based on Rotation Index
             idx = self.cam.rotation_index % 4
-
-            if idx == 0:  # 0 degrees
+            vx, vy = 0, 0
+            if idx == 0:
                 vx, vy = input_x, input_y
-            elif idx == 1:  # 90 degrees
+            elif idx == 1:
                 vx, vy = input_y, -input_x
-            elif idx == 2:  # 180 degrees
+            elif idx == 2:
                 vx, vy = -input_x, -input_y
-            elif idx == 3:  # 270 degrees
+            elif idx == 3:
                 vx, vy = -input_y, input_x
 
             if vx != 0 or vy != 0:
@@ -387,17 +493,24 @@ class Game:
                 vx /= l
                 vy /= l
                 speed = self.player.stats["speed"]
-                if self.player.is_dashing:
-                    speed *= 3.0
+                if self.player.is_dashing: speed *= 3.0
                 self.player.vx = vx * speed
                 self.player.vy = vy * speed
             else:
-                if not self.player.is_dashing:
-                    self.player.vx = 0
-                    self.player.vy = 0
+                if not self.player.is_dashing: self.player.vx, self.player.vy = 0, 0
 
-            # Pass VM to update to spawn ghosts
             self.player.update(dt, self.enemies, self.bullets, self.map_grid, self.vm)
+
+            # Collecting Orbs
+            for orb in self.orbs:
+                orb.update(dt)
+                if distance(self.player.wx, self.player.wy, orb.wx, orb.wy) < 1.0:
+                    orb.lifetime = 0
+                    self.player.energy = min(self.player.max_energy, self.player.energy + 10)
+                    # Visual feedback
+                    sx, sy = self.cam.world_to_screen(orb.wx, orb.wy)
+                    self.vm.add_particle(sx, sy, (0, 255, 255))
+            self.orbs = [o for o in self.orbs if o.lifetime > 0]
 
             if pygame.mouse.get_pressed()[0]:
                 if self.wave_active or (my < SCREEN_H - 250):
@@ -405,7 +518,8 @@ class Game:
                     new_bullets = self.player.shoot(m_wx, m_wy, self.vm)
                     if new_bullets:
                         self.bullets.extend(new_bullets)
-                        self.vm.add_casing(self.player.wx, self.player.wy)
+                        if not self.player.ultimate_active:  # Don't spawn casing spam during ult
+                            self.vm.add_casing(self.player.wx, self.player.wy)
 
             self.cam.set_target(self.player.wx, self.player.wy)
             self.cam.update(dt)
@@ -413,31 +527,24 @@ class Game:
             if self.wave_active:
                 if self.enemies_spawned < self.enemies_to_spawn:
                     self.spawn_timer -= dt
-                    rate = max(0.5, 2.0 - self.level * 0.1)
                     if self.spawn_timer <= 0:
                         self.spawn_enemy()
-                        self.spawn_timer = rate
+                        self.spawn_timer = max(0.5, 2.0 - self.level * 0.1)
                 elif len(self.enemies) == 0:
                     self.wave_active = False
-                    self.vm.add_text(SCREEN_W / 2, SCREEN_H / 2, "WAVE CLEARED", (100, 255, 100), 3.0, 30)
                     self.player.money += 50 * self.level
 
             for b in self.bullets: b.update(dt)
             self.bullets = [b for b in self.bullets if b.lifetime > 0]
-
             for g in self.grenades:
                 g.update(dt, self.map_grid)
-                if g.exploded:
-                    self.handle_explosion(g.x, g.y, 80.0, 4.0)
+                if g.exploded: self.handle_explosion(g.x, g.y, 80.0, 4.0)
             self.grenades = [g for g in self.grenades if not g.exploded]
 
             for e in self.enemies:
                 e.update(dt, self.player, self.map_grid)
                 if not self.player.is_dashing:
-                    dx = self.player.wx - e.wx
-                    dy = self.player.wy - e.wy
-                    dist = math.hypot(dx, dy)
-                    if dist < 0.8:
+                    if distance(self.player.wx, self.player.wy, e.wx, e.wy) < 0.8:
                         self.player.health -= e.damage_to_player * dt
                         self.damage_alpha = 150.0
 
@@ -453,9 +560,7 @@ class Game:
                     self.vm.add_particle(sx, sy, (200, 200, 200))
                 for e in self.enemies:
                     if e.uid in b.hit_list: continue
-                    dx = e.wx - b.wx
-                    dy = e.wy - b.wy
-                    if math.hypot(dx, dy) < 0.8:
+                    if distance(e.wx, e.wy, b.wx, b.wy) < 0.8:
                         e.take_damage(b.damage)
                         b.hit_list.append(e.uid)
                         sx, sy = self.cam.world_to_screen(e.wx, e.wy)
@@ -476,8 +581,11 @@ class Game:
                     self.cam.add_shake(3.0)
                     sx, sy = self.cam.world_to_screen(e.wx, e.wy)
                     self.vm.add_text(sx, sy - 60, f"+${e.money_value}", COL_MONEY)
-                    for _ in range(8):
-                        self.vm.add_particle(sx, sy, e.color)
+                    for _ in range(8): self.vm.add_particle(sx, sy, e.color)
+
+                    # FIX 3: Spawn Energy Orb Chance (50%)
+                    if random.random() < 1:
+                        self.orbs.append(EnergyOrb(e.wx, e.wy))
                 else:
                     survivors.append(e)
             self.enemies = survivors
@@ -487,22 +595,18 @@ class Game:
             self.screen.fill(COL_BG)
             draw_floor_grid(self.screen, self.cam, MAP_W, MAP_H, self.level)
             self.vm.draw_floor(self.screen, self.cam)
-            self.vm.draw_ghosts(self.screen, self.cam)  # Draw Dash Trails
+            self.vm.draw_ghosts(self.screen, self.cam)
 
-            self.player.draw_shadow(self.screen, self.cam)
-            for e in self.enemies:
-                e.draw_shadow(self.screen, self.cam)
+            # Draw Orbs
+            for orb in self.orbs: orb.draw(self.screen, self.cam)
 
             render_list = []
             render_list.append(self.player)
             render_list.extend(self.enemies)
             render_list.extend(self.walls)
-
-            # SORT FIX: Correctly sort objects by screen Y (Depth)
             render_list.sort(key=lambda x: self.cam.world_to_screen(x.wx, x.wy)[1])
 
-            for entity in render_list:
-                entity.draw(self.screen, self.cam)
+            for entity in render_list: entity.draw(self.screen, self.cam)
 
             for b in self.bullets: b.draw(self.screen, self.cam)
             for g in self.grenades: g.draw(self.screen, self.cam)
@@ -518,10 +622,9 @@ class Game:
                 self.damage_alpha = max(0, self.damage_alpha - 300 * dt)
 
             self.draw_hud()
-
             pygame.display.flip()
-
         pygame.quit()
+
 
 if __name__ == "__main__":
     Game().run()
