@@ -12,8 +12,8 @@ This roadmap is structured to introduce one major mechanic at a time. It starts 
 |:-:| :--- |:------------| :--- |
 | 0 | [**Calculator**](./Calculator) | ✅ Done      | **GUI Fundamentals**: Creating buttons, handling Mouse Input, and logic state management. |
 | 1 | [**Pong**](./01_pong) | ✅ Done | Basic collision detection, understanding the Game Loop, and drawing `Rect` objects. |
-| 2 | [**Snake**](./02_snake) | 🟨 On-going     | Manipulating `Lists`, handling Grid movement, and random item generation. |
-| 3 | [**Breakout**](./03_breakout) | 🔴 Todo     | Advanced physics reflection, managing object state, and score tracking. |
+| 2 | [**Snake**](./02_snake) | ✅ Done | Manipulating `Lists`, handling Grid movement, and random item generation. |
+| 3 | [**Breakout**](./03_breakout) | 🟨 On-going     | Advanced physics reflection, managing object state, and score tracking. |
 | 4 | [**Space Invaders**](./04_space_invaders) | 🔴 Todo     | Handling projectiles, implementing Enemy AI movement patterns, and collision groups. |
 | 5 | [**Flappy Bird**](./05_flappy_bird) | 🔴 Todo     | Simulating Gravity, creating Infinite Scrolling backgrounds, and persistent high scores. |
 | 6 | [**Dino Run**](./06_dino_run) | 🔴 Todo     | Sprite Animation cycles, precise Hitboxes, and game speed scaling over time. |
