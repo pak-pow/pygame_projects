@@ -20,8 +20,19 @@ class Player(pygame.sprite.Sprite):
         self.max_speed = 300
         self.friction = 0.90
 
+        # DASH VARIABLES
+        self.is_dashing = False
+        self.dash_speed = 800
+        self.dash_duration = 0.2  # FIX 1: Added duration (0.2 seconds is snappy)
+        self.dash_time_left = 0
+        self.dash_cooldown = 0.5
+        self.dash_timer = 0
+
     def update(self, dt):
         self.prev_pos = self.pos.copy()
+
+        # Reduce cooldown timer
+        self.dash_timer = max(0, self.dash_timer - dt)
 
         keys = pygame.key.get_pressed()
         direction = pygame.Vector2(0, 0)
@@ -31,24 +42,51 @@ class Player(pygame.sprite.Sprite):
         if keys[K_a]: direction.x -= 1
         if keys[K_d]: direction.x += 1
 
+        # NORMALIZE INPUT
         if direction.length_squared() > 0:
             direction = direction.normalize()
-            self.vel += direction * self.acceleration * dt
+
+        # CHECK DASH TRIGGER
+        if keys[K_LSHIFT] and not self.is_dashing and self.dash_timer <= 0 and direction.length_squared() > 0:
+            self.is_dashing = True
+            self.dash_time_left = self.dash_duration
+            self.dash_timer = self.dash_cooldown
+
+            # Apply dash velocity immediately
+            self.vel = direction * self.dash_speed
+
+        # --- MOVEMENT LOGIC ---
+
+        if self.is_dashing:
+            # FIX 2: While dashing, we count down the timer
+            self.dash_time_left -= dt
+
+            # If dash ends, stop dashing and cut velocity slightly
+            if self.dash_time_left <= 0:
+                self.is_dashing = False
+                self.vel *= 0.5  # Optional: slows you down a bit after dash ends
+
         else:
-            self.vel *= self.friction
-            if self.vel.length() < 10:
-                self.vel.update(0, 0)
+            # FIX 3: Only apply Normal Acceleration and Speed Limit when NOT dashing
+            if direction.length_squared() > 0:
+                self.vel += direction * self.acceleration * dt
+            else:
+                self.vel *= self.friction
+                if self.vel.length() < 10:
+                    self.vel.update(0, 0)
 
-        if self.vel.length() > self.max_speed:
-            self.vel.scale_to_length(self.max_speed)
+            # Only limit speed if we are NOT dashing
+            if self.vel.length() > self.max_speed:
+                self.vel.scale_to_length(self.max_speed)
 
+        # APPLY POSITION
         self.pos += self.vel * dt
 
+        # CLAMP TO SCREEN
         self.pos.x = max(20, min(Main.DISPLAY_WIDTH - 20, self.pos.x))
         self.pos.y = max(20, min(Main.DISPLAY_HEIGHT - 20, self.pos.y))
 
         self.rect.center = self.pos
-
 
 class Items(pygame.sprite.Sprite):
     def __init__(self, name, color):
