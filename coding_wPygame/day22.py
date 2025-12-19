@@ -1,3 +1,4 @@
+import random
 import pygame
 import sys
 
@@ -7,10 +8,10 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.image = pygame.Surface((40,40))
-        self.image.fill((0,255,0))
+        self.image = pygame.Surface((40, 40))
+        self.image.fill((0, 100, 255))
 
-        self.rect = self.image.get_rect(center = (400,300))
+        self.rect = self.image.get_rect(center=(400, 300))
         self.pos = pygame.Vector2(self.rect.center)
         self.velocity = pygame.Vector2()
 
@@ -19,32 +20,52 @@ class Player(pygame.sprite.Sprite):
         self.friction = 0.90
         self.threshold = 10
 
-    def update(self, dt):
+        # RPG STATS
+        self.current_hp = 100
+        self.max_hp = 100
+        self.xp = 0
+        self.max_xp = 50
+        self.level = 1
 
+    def take_damage(self, amount):
+        self.current_hp -= amount
+        if self.current_hp < 0:
+            self.current_hp = 0
+
+    def gain_xp(self, amount):
+        old_level = self.level
+        self.xp += amount
+
+        while self.xp >= self.max_xp:
+            self.xp -= self.max_xp
+            self.level += 1
+            self.max_xp = int(self.max_xp * 1.5)
+            self.max_hp += 20
+            self.current_hp = self.max_hp
+            print(f"Level Up! Now Level {self.level}")
+
+        return self.level > old_level
+
+    def update(self, dt):
         keys = pygame.key.get_pressed()
-        direction = pygame.Vector2(0,0)
+        direction = pygame.Vector2(0, 0)
 
         if keys[K_w]:
             direction.y -= 1
-
         if keys[K_s]:
             direction.y += 1
-
         if keys[K_a]:
             direction.x -= 1
-
         if keys[K_d]:
             direction.x += 1
 
         if direction.length_squared() > 0:
             direction = direction.normalize()
             self.velocity += direction * self.acceleration * dt
-
         else:
             self.velocity *= self.friction
-
             if self.velocity.length() < self.threshold:
-                self.velocity.update(0,0)
+                self.velocity.update(0, 0)
 
         if self.velocity.length() > self.max_speed:
             self.velocity.scale_to_length(self.max_speed)
