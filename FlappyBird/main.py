@@ -3,6 +3,22 @@ import sys
 
 from pygame.locals import *
 
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.image = pygame.Surface((30,30))
+        self.image.fill(Main.UI_SKY_BLUE)
+
+        self.rect = self.image.get_rect(center = (Main.DISPLAY_WIDTH // 2, Main.DISPLAY_HEIGHT // 2))
+        self.pos = pygame.Vector2(self.rect.center)
+        self.velocity = pygame.Vector2()
+
+        self.on_ground = False
+
+    def update(self, dt):
+        pass
+
 class Main:
 
     UI_WHITE = (245, 245, 245)
@@ -37,6 +53,11 @@ class Main:
 
     def run(self):
 
+        all_sprite = pygame.sprite.Group()
+        player = Player()
+
+        all_sprite.add(player)
+
         while True:
 
             dt = self.CLOCK.tick(self.FPS) / 1000
@@ -45,7 +66,10 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
+            all_sprite.update(dt)
             self.DISPLAY.fill(self.UI_BLACK)
+
+            all_sprite.draw(self.DISPLAY)
             pygame.display.update()
 
 if __name__ == "__main__":
