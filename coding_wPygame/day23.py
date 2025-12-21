@@ -73,6 +73,11 @@ class Main:
 
     def run(self):
 
+        all_sprite = pygame.sprite.Group()
+        player = Player()
+
+        all_sprite.add(player)
+
         while True:
             dt = self.CLOCK.tick(self.FPS) / 1000
 
@@ -81,7 +86,10 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
+            all_sprite.update(dt)
             self.DISPLAY.fill(self.DISPLAY_COLOR)
+
+            all_sprite.draw(self.DISPLAY)
             pygame.display.update()
 
 if __name__ == "__main__":
