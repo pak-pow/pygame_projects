@@ -16,8 +16,8 @@ This roadmap is structured to introduce one major mechanic at a time. It starts 
 | 3 | [**Breakout**](./03_breakout) | ✅ Done     | Advanced physics reflection, managing object state, and score tracking. |
 | 4 | [**Space Invaders**](./04_space_invaders) | ✅ Done     | Handling projectiles, implementing Enemy AI movement patterns, and collision groups. |
 | 5 | [**Flappy Bird**](./05_flappy_bird) |  ✅ Done    | Simulating Gravity, creating Infinite Scrolling backgrounds, and persistent high scores. |
-| 6 | [**Dino Run**](./06_dino_run) | 🟨 On-going     | Sprite Animation cycles, precise Hitboxes, and game speed scaling over time. |
-| 7 | [**Tetris**](./07_tetris) | 🔴 Todo     | Logic for 2D Arrays (Matrices), shape Rotation algorithms, and row clearing. |
+| 6 | [**Dino Run**](./06_dino_run) |  ✅ Done   | Sprite Animation cycles, precise Hitboxes, and game speed scaling over time. |
+| 7 | [**Tetris**](./07_tetris) | 🟨 On-going      | Logic for 2D Arrays (Matrices), shape Rotation algorithms, and row clearing. |
 | 8 | [**Platformer**](./08_platformer) | 🔴 Todo     | Implementing Gravity/Friction, side-scrolling Camera, and loading Levels from files. |
 | 9 | [**Top-Down RPG**](./09_rpg) | 🔴 Todo     | Using Tilemaps for world building, Inventory systems, and A* Pathfinding. |
 | 10 | [**Raycaster 3D**](./10_raycaster) | 🔴 Todo     | Utilizing Trigonometry for pseudo-3D rendering and raycasting engines. |
