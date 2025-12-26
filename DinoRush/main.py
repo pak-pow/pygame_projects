@@ -53,6 +53,11 @@ class Main:
     CLOCK = pygame.time.Clock()
     FPS = 60
 
+    GRAVITY = 2000
+    JUMP_STRENGTH = - 800
+    MOVE_SPEED = 800
+    FLOOR_Y = 550
+
     def __init__(self):
 
         pygame.init()
@@ -60,6 +65,11 @@ class Main:
         pygame.display.set_caption("DINO RUSH")
 
     def run(self):
+
+        all_sprites = pygame.sprite.Group()
+        player = Player()
+
+        all_sprites.add(player)
 
         while True:
 
@@ -70,8 +80,14 @@ class Main:
                     pygame.quit()
                     sys.exit()
 
+                if event.type == KEYDOWN:
+                    if event.key == K_SPACE:
+                        player.jump()
+
+            all_sprites.update(dt)
             self.DISPLAY.fill(self.DISPLAY_COLOR)
 
+            all_sprites.draw(self.DISPLAY)
             pygame.draw.line(self.DISPLAY, (0,0,0), (0,550), (1000,550), 2)
             pygame.display.update()
 
