@@ -1,3 +1,5 @@
+import random
+
 import pygame
 import sys
 
@@ -10,26 +12,30 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface((30,30))
         self.image.fill((255,0,0))
 
-        self.rect = self.image.get_rect(center = (100, 535))
+        self.rect = self.image.get_rect(midbottom = (100, Main.FLOOR_Y))
         self.pos = pygame.Vector2(self.rect.center)
         self.velocity = pygame.Vector2()
 
         self.on_ground = True
         self.jump_count = 0
-        self.max_jump = 1
+        self.max_jump = 2
 
     def jump(self):
 
         if self.jump_count < self.max_jump:
             self.velocity.y = Main.JUMP_STRENGTH
             self.jump_count += 1
+            self.on_ground = False
 
     def update(self, dt):
 
         keys = pygame.key.get_pressed()
-        self.velocity.x = 0
+        current_gravity = Main.GRAVITY
 
-        self.velocity.y += Main.GRAVITY * dt
+        if keys[K_s]:
+            current_gravity += 4000
+
+        self.velocity.y += current_gravity * dt
         self.pos += self.velocity * dt
 
         if self.pos.y >= Main.FLOOR_Y:
@@ -39,10 +45,29 @@ class Player(pygame.sprite.Sprite):
             self.on_ground = True
             self.jump_count = 0
 
-        else:
-            self.on_ground = False
+        self.rect.midbottom = round(self.pos.x), round(self.pos.y)
 
-        self.rect.midbottom = round(self.pos)
+class Cactus(pygame.sprite.Sprite):
+    def __init__(self, x_offset = 0):
+        super().__init__()
+
+        width = random.randint(20,35)
+        height = random.randint(40,70)
+
+        self.image = pygame.Surface((width,height))
+        self.image.fill((0,150,0))
+
+        spawn_x = Main.DISPLAY_WIDTH + 40 + x_offset
+        self.rect = self.image.get_rect(bottomleft = (spawn_x  + 50, Main.FLOOR_Y))
+        self.pos = pygame.Vector2(self.rect.topleft)
+
+    def update(self, dt):
+
+        self.pos.x -= Main.MOVE_SPEED * dt
+        self.rect.x = round(self.pos.x)
+
+        if self.rect.x < 0:
+            self.kill()
 
 class Main:
 
